@@ -51,7 +51,7 @@ class NetworkAdapter:
         return self.normalize_alive_players_count(game.alive_players_count)
 
     def set_defuse_cards_count(self, player):
-        return self.normalize_defuse_cards_count(player.defuse_cards_num)
+        return self.normalize_defuse_cards_count(player.defuse_cards_count)
 
     def set_deck_count(self, game):
         return self.normalize_deck_count(len(game.deck))

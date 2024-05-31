@@ -11,12 +11,18 @@ class Player:
         self.adapter = None
 
     @property
-    def defuse_cards_num(self):
+    def defuse_cards_count(self):
         return len([card for card in self.hand if card.is_defuse])
 
+    def get_playable_cards(self):
+        return [card for card in self.hand if card.is_playable]
+
     @property
-    def has_cards_in_hand(self):
-        return len(self.hand) > 0
+    def has_playable_cards_in_hand(self):
+        return len(self.get_playable_cards()) > 0
+
+    def pick_card(self, card):
+        self.hand.append(card)
 
     def set_adapter(self, adapter):
         self.adapter = adapter
@@ -30,9 +36,12 @@ class Player:
     def receive_card(self, card):
         self.hand.append(card)
 
-    def draw_card(self, deck):
+    def receive_cards(self, cards):
+        self.hand.extend(cards)
+
+    @staticmethod
+    def draw_card(deck):
         card = deck.draw_card()
-        self.hand.append(card)
         return card
 
     def play_card(self, card):
@@ -50,7 +59,7 @@ class Player:
 
     def use_card(self, card):
         self.hand.remove(card)
-        card.use()
+        card.action()
 
     def place_exploding_kitten(self, card, deck):
         idx = self.decide_exploding_kitten_placement()
@@ -58,6 +67,7 @@ class Player:
 
     def decide_play_card(self):
         y = self.get_results()
+        return y[0] > 0.5
 
     def decide_exploding_kitten_placement(self):
         y = self.get_results()
@@ -65,8 +75,7 @@ class Player:
 
     def decide_nope(self):
         y = self.get_results()
-        if y[0] > 0.5:
-            return True
+        return y[0] > 0.5
 
     def get_results(self):
         raise NotImplementedError
@@ -77,7 +86,7 @@ class RandomPlayer(Player):
         return [random.random() for _ in range(8)]
 
     def choose_card(self):
-        return random.choice(self.hand)
+        return random.choice(self.get_playable_cards())
 
 
 class NeuralPlayer(Player):

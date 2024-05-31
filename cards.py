@@ -1,6 +1,7 @@
 class BaseCard:
     def __init__(self):
         self.name = self.__class__.__name__
+        self.is_playable = True
 
     def __repr__(self):
         return self.name
@@ -18,31 +19,37 @@ class BaseCard:
         return isinstance(self, Card.Attack)
 
     @property
+    def is_skip(self):
+        return isinstance(self, Card.Skip)
+
+    @property
     def is_nope(self):
         return isinstance(self, Card.Nope)
 
-    def use(self, game, **kwargs):
-        raise NotImplementedError
+    def action(self, game, **kwargs):
+        pass
 
 
 class Card:
     class ExplodingKitten(BaseCard):
         def __init__(self):
             super().__init__()
+            self.is_playable = False
 
-        def use(self, game, **kwargs):
+        def action(self, game, **kwargs):
             player = game.players[game.current_player_index]
             defuse_card = player.get_defuse_card()
             if defuse_card:
-                defuse_card.use(game, kitten_card=self)
+                defuse_card.action(game, kitten_card=self)
             else:
                 player.set_dead()
 
     class Defuse(BaseCard):
         def __init__(self):
             super().__init__()
+            self.is_playable = False
 
-        def use(self, game, **kwargs):
+        def action(self, game, **kwargs):
             player = game.players[game.current_player_index]
             player.hand.remove(self)
             idx = int(player.decide_exploding_kitten_placement() * len(game.deck))
@@ -52,17 +59,21 @@ class Card:
         def __init__(self):
             super().__init__()
 
-        def use(self, game, **kwargs):
-            game.skip_draw = True
-            game.current_player_index += 1
-            game.turns_count = game.turns_count * 2
+        def action(self, game, **kwargs):
+            game.end_turn = True
+            game.next_player()
+            if game.turns_count < 2:
+                game.turns_count = 2
+            else:
+                game.turns_count += 2
 
     class Skip(BaseCard):
         def __init__(self):
             super().__init__()
 
-        def use(self, game, **kwargs):
-            game.skip_draw = True
+        def action(self, game, **kwargs):
+            game.end_turn = True
+            game.turns_count -= 1
 
     class Favor(BaseCard):
         def __init__(self):
@@ -72,15 +83,15 @@ class Card:
         def __init__(self):
             super().__init__()
 
-        def use(self, game, **kwargs):
+        def action(self, game, **kwargs):
             game.deck.shuffle()
 
     class SeeTheFuture(BaseCard):
         def __init__(self):
             super().__init__()
 
-        def use(self, game, **kwargs):
-            game.get_three_top_cards()
+        def action(self, game, **kwargs):
+            game.deck.get_top_three_cards()
 
     class Nope(BaseCard):
         def __init__(self):
