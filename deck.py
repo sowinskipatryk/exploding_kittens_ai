@@ -2,8 +2,6 @@ import random
 
 
 class Deck:
-    ALL_CARDS_NUM = 56
-
     def __init__(self, cards):
         self.cards = cards
 
@@ -13,7 +11,7 @@ class Deck:
     def draw_card(self):
         return self.cards.pop()
 
-    def put_card(self, idx, card):
+    def insert_card(self, idx, card):
         self.cards.insert(idx, card)
 
     def __len__(self):

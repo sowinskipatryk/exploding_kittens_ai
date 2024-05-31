@@ -2,23 +2,33 @@ import random
 
 from cards import Card
 from deck import Deck
-from players import Player
+from players import Player, NeuralPlayer, RandomPlayer
 
 
 class Game:
-    def __init__(self, players_num):
-        self.players_num = players_num
-        self.players = [Player(f"Player {i + 1}") for i in range(players_num)]
-        self.turn_index = random.randrange(0, players_num)
+    def __init__(self, players_count):
+        self.players_count = players_count
+        self.players = [RandomPlayer(f"Player {i + 1}") for i in range(players_count)]
         self.deck = self.create_deck()
         self.deal_defuse_cards()
 
+        self.current_player_index = random.randrange(0, players_count)
+        self.turns_count = 1
+        self.skip_draw = False
+
+    @property
+    def alive_players_count(self):
+        return len([player for player in self.players if player.is_alive])
+
     def deal_defuse_cards(self):
         for player in self.players:
-            player.get_card(Card.Defuse())
+            player.receive_card(Card.Defuse())
 
     def get_three_top_cards(self):
         return self.deck[-3:]
+
+    def next_player(self):
+        self.current_player_index = (self.current_player_index + 1) % self.players_count
 
     def create_deck(self):
         cards = []
@@ -35,52 +45,75 @@ class Game:
         cards.extend([Card.Cattermelon() for _ in range(4)])
         cards.extend([Card.RainbowRalphingCat() for _ in range(4)])
 
-        cards.extend([Card.ExplodingKitten() for _ in range(self.players_num - 1)])
-        cards.extend([Card.Defuse() for _ in range(min(2, 6 - self.players_num))])
+        cards.extend([Card.ExplodingKitten() for _ in range(self.players_count - 1)])
+        cards.extend([Card.Defuse() for _ in range(min(2, 6 - self.players_count))])
 
         deck = Deck(cards)
         deck.shuffle()
         return deck
 
-    def resolve_nope_stack(self, initial_player, card, game_state):
+    def resolve_nopes(self):
+        current_player_index = self.current_player_index
         nope_stack = []
-        current_player_index = self.turn_index
+        tries_since_nope = 0
 
-        while True:
-            current_player_index = (current_player_index + 1) % self.players_num
-            current_player = game_state.players[current_player_index]
+        while tries_since_nope < self.players_count:
+            tries_since_nope += 1
+            current_player_index = (current_player_index + 1) % self.players_count
+            current_player = self.players[current_player_index]
 
-            if current_player != initial_player and current_player.has_card('Nope'):
-                if current_player.wants_to_nope():
-                    nope_card = current_player.play_nope()
-                    nope_stack.append(nope_card)
-                    print(f"{current_player.name} plays a Nope card!")
+            nope_card = current_player.get_nope_card()
+            if nope_card and current_player.decide_nope():
+                current_player.play_card(nope_card)
+                nope_stack.append(nope_card)
+                tries_since_nope = 0
+                print(f"{current_player.name} plays a Nope card!")
 
-            if len(nope_stack) % 2 == 0:
-                # Even number of Nopes, action goes through
-                return False
-            else:
-                # Odd number of Nopes, action is noped
-                if current_player_index == game_state.players.index(initial_player):
-                    return True
+        if len(nope_stack) % 2 == 0:
+            return True
 
     def play(self):
-        turns_to_play = 1
-        while len([player for player in self.players if player.is_alive]) > 1:
-            if not turns_to_play:
-                self.turn_index = (self.turn_index + 1) % len(self.players)
+        while self.alive_players_count > 1:
+            current_player = self.players[self.current_player_index]
 
-            current_player = self.players[self.turn_index]
+            if not current_player.is_alive:
+                self.next_player()
+                continue
+
+            if not self.turns_count:
+                self.next_player()
+                self.turns_count = 1
+                continue
+
             print(f"{current_player.name}'s turn")
 
-            if current_player.is_alive:
+            attack = False
+            while current_player.has_cards_in_hand and current_player.decide_play_card() and not attack:
+                play_card = current_player.choose_card()
+                is_card_noped = self.resolve_nopes()
+                if not is_card_noped:
+                    play_card.use()
+                    print(f'{play_card} is used!')
+                    if play_card.is_attack:
+                        attack = True
+
+            if attack:
+                continue
+
+            if self.skip_draw:
+                self.skip_draw = False
+            else:
                 card = current_player.draw_card(self.deck)
+
                 if card.is_exploding_kitten:
-                    defuse_card = current_player.get_defuse_card()
-                    if defuse_card:
-                        current_player.use_card(defuse_card)
-                    else:
-                        current_player.set_dead()
+                    card.use(self)
+                    # defuse_card = current_player.get_defuse_card()
+                    # if defuse_card:
+                    #     current_player.use_card(defuse_card)
+                    # else:
+                    #     current_player.set_dead()
+
+            self.turns_count -= 1
 
         winner = next(player for player in self.players if player.is_alive)
         print(f"{winner.name} is the winner!")

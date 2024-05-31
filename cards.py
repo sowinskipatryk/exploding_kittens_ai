@@ -9,8 +9,17 @@ class BaseCard:
     def is_exploding_kitten(self):
         return isinstance(self, Card.ExplodingKitten)
 
+    @property
     def is_defuse(self):
         return isinstance(self, Card.Defuse)
+
+    @property
+    def is_attack(self):
+        return isinstance(self, Card.Attack)
+
+    @property
+    def is_nope(self):
+        return isinstance(self, Card.Nope)
 
     def use(self, game, **kwargs):
         raise NotImplementedError
@@ -22,7 +31,7 @@ class Card:
             super().__init__()
 
         def use(self, game, **kwargs):
-            player = game.players[game.turn_index]
+            player = game.players[game.current_player_index]
             defuse_card = player.get_defuse_card()
             if defuse_card:
                 defuse_card.use(game, kitten_card=self)
@@ -34,18 +43,26 @@ class Card:
             super().__init__()
 
         def use(self, game, **kwargs):
-            player = game.players[game.turn_index]
-            player.hand.pop(self)
-            idx = player.decide_exploding_kitten_placement()
-            game.deck.put_card(idx, kwargs.get('kitten_card'))
+            player = game.players[game.current_player_index]
+            player.hand.remove(self)
+            idx = int(player.decide_exploding_kitten_placement() * len(game.deck))
+            game.deck.insert_card(idx, kwargs.get('kitten_card'))
 
     class Attack(BaseCard):
         def __init__(self):
             super().__init__()
 
+        def use(self, game, **kwargs):
+            game.skip_draw = True
+            game.current_player_index += 1
+            game.turns_count = game.turns_count * 2
+
     class Skip(BaseCard):
         def __init__(self):
             super().__init__()
+
+        def use(self, game, **kwargs):
+            game.skip_draw = True
 
     class Favor(BaseCard):
         def __init__(self):

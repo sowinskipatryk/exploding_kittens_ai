@@ -10,7 +10,7 @@ class NetworkAdapter:
 
     def __init__(self, players_num):
         self.players_num = players_num
-        self.input_array = []
+        self.input_array = [0 for _ in range(100)]
 
         input_array = [
             # Player's Hand (binary vector for each card type)
@@ -44,11 +44,26 @@ class NetworkAdapter:
             0.75,  # Example: 4 players still in the game (assuming a max of 5)
         ]
 
-    def normalize_defuse_count(self):
+    def set_player_cards(self):
         pass
 
-    def normalize_deck_count(self):
-        pass
+    def set_alive_players_count(self, game):
+        return self.normalize_alive_players_count(game.alive_players_count)
+
+    def set_defuse_cards_count(self, player):
+        return self.normalize_defuse_cards_count(player.defuse_cards_num)
+
+    def set_deck_count(self, game):
+        return self.normalize_deck_count(len(game.deck))
+
+    def normalize_alive_players_count(self, count):
+        return count / 5
+
+    def normalize_defuse_cards_count(self, count):
+        return count / 6
+
+    def normalize_deck_count(self, count):
+        return count / 56
 
 # play:
 # skip
