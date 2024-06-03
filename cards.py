@@ -1,10 +1,15 @@
 class BaseCard:
     def __init__(self):
         self.name = self.__class__.__name__
-        self.is_playable = True
 
     def __repr__(self):
         return self.name
+
+    def is_playable(self):
+        return True
+
+    def is_pair_card(self):
+        return isinstance(self, PairCard)
 
     @property
     def is_exploding_kitten(self):
@@ -30,11 +35,18 @@ class BaseCard:
         pass
 
 
+class PairCard(BaseCard):
+    def is_playable(self):
+        return False
+
+
 class Card:
     class ExplodingKitten(BaseCard):
         def __init__(self):
             super().__init__()
-            self.is_playable = False
+
+        def is_playable(self):
+            return False
 
         def action(self, game, **kwargs):
             player = game.players[game.current_player_index]
@@ -47,7 +59,9 @@ class Card:
     class Defuse(BaseCard):
         def __init__(self):
             super().__init__()
-            self.is_playable = False
+
+        def is_playable(self):
+            return False
 
         def action(self, game, **kwargs):
             player = game.players[game.current_player_index]
@@ -97,22 +111,22 @@ class Card:
         def __init__(self):
             super().__init__()
 
-    class TacoCat(BaseCard):
+    class TacoCat(PairCard):
         def __init__(self):
             super().__init__()
 
-    class BeardCat(BaseCard):
+    class BeardCat(PairCard):
         def __init__(self):
             super().__init__()
 
-    class HairyPotatoCat(BaseCard):
+    class HairyPotatoCat(PairCard):
         def __init__(self):
             super().__init__()
 
-    class Cattermelon(BaseCard):
+    class Cattermelon(PairCard):
         def __init__(self):
             super().__init__()
 
-    class RainbowRalphingCat(BaseCard):
+    class RainbowRalphingCat(PairCard):
         def __init__(self):
             super().__init__()

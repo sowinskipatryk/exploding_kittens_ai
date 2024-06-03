@@ -1,4 +1,4 @@
 from cards import Card
 
-CARDS_MAPPING = [Card.ExplodingKitten, Card.Defuse, Card.BeardCat, Card.HairyPotatoCat, Card.Cattermelon, Card.TacoCat,
-                 Card.SeeTheFuture, Card.Attack, Card.Nope, Card.Skip, Card.RainbowRalphingCat, Card.Favor, Card.Shuffle]
+CARDS_MAPPING = [Card.Attack, Card.Skip, Card.Nope, Card.SeeTheFuture, Card.Favor, Card.Shuffle,
+                 Card.BeardCat, Card.HairyPotatoCat, Card.Cattermelon, Card.TacoCat, Card.RainbowRalphingCat]

@@ -5,6 +5,7 @@ class Player:
     def __init__(self, name):
         self.name = name
         self.hand = []
+        self.top_three_deck_cards = []
         self.is_alive = True
         self.pending_turns = 1
         self.network = None
@@ -15,7 +16,10 @@ class Player:
         return len([card for card in self.hand if card.is_defuse])
 
     def get_playable_cards(self):
-        return [card for card in self.hand if card.is_playable]
+        return [card for card in self.hand if card.is_playable()]
+
+    def has_multiple_cards_of_type(self, card_type, amount):
+        return len([card for card in self.hand if isinstance(card, card_type)]) > amount
 
     @property
     def has_playable_cards_in_hand(self):
@@ -71,7 +75,7 @@ class Player:
 
     def decide_exploding_kitten_placement(self):
         y = self.get_results()
-        return y[0]
+        return y[-1]
 
     def decide_nope(self):
         y = self.get_results()
@@ -83,7 +87,7 @@ class Player:
 
 class RandomPlayer(Player):
     def get_results(self):
-        return [random.random() for _ in range(8)]
+        return [random.random() for _ in range(17)]
 
     def choose_card(self):
         return random.choice(self.get_playable_cards())
@@ -92,3 +96,8 @@ class RandomPlayer(Player):
 class NeuralPlayer(Player):
     def get_results(self):
         return self.network.activate(self.adapter.input_array)
+
+    # def choose_card(self):
+    #     y = self.get_results()
+    #     card_values = y[:10]
+    #     return card_values.index(max(card_values))
