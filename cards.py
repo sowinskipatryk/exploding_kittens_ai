@@ -1,3 +1,6 @@
+from log.config import logger
+
+
 class BaseCard:
     def __init__(self):
         self.name = self.__class__.__name__
@@ -52,9 +55,11 @@ class Card:
             player = game.players[game.current_player_index]
             defuse_card = player.get_defuse_card()
             if defuse_card:
+                logger.info(f'{player.name} [PLAY  ] {defuse_card}')
                 defuse_card.action(game, kitten_card=self)
             else:
                 player.set_dead()
+                logger.info(f'{player.name} [STATUS] dead')
 
     class Defuse(BaseCard):
         def __init__(self):
@@ -92,6 +97,12 @@ class Card:
     class Favor(BaseCard):
         def __init__(self):
             super().__init__()
+
+        def action(self, game, **kwargs):
+            player = game.players[game.current_player_index]
+            opponent_id = player.decide_opponent()
+            opponent = game.players[opponent_id]
+            card_id = opponent.decide_give_card()
 
     class Shuffle(BaseCard):
         def __init__(self):

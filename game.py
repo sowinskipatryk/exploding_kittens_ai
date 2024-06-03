@@ -10,10 +10,11 @@ from log.config import logger
 class Game:
     def __init__(self, players_count=5):
         self.players_count = players_count
-        self.players = [RandomPlayer(f"Player {i + 1}") for i in range(players_count)]
+        self.players = [RandomPlayer(index=i) for i in range(players_count)]
         self.deck = self.create_deck()
 
         self.deal_defuse_cards()
+        self.shuffle_deck()
         self.deal_deck_cards()
         self.put_exploding_kittens_in_the_deck()
         self.shuffle_deck()
@@ -75,7 +76,7 @@ class Game:
 
             nope_card = current_player.get_nope_card()
             if nope_card and current_player.decide_nope():
-                current_player.play_card(nope_card)
+                current_player.play_card(nope_card, self)
                 nope_stack.append(nope_card)
                 tries_since_nope = 0
                 logger.info(f"{current_player.name} [PLAY  ] Nope!")
@@ -84,12 +85,12 @@ class Game:
             return True
 
     def play(self):
+        logger.info("GAME START")
         while self.alive_players_count > 1:
-            logger.debug([player.is_alive for player in self.players])
             current_player = self.players[self.current_player_index]
 
             if not current_player.is_alive:
-                logger.info(f"{current_player.name} [STATUS] dead")
+                logger.debug(f"{current_player.name} [STATUS] dead")
                 self.next_player()
                 continue
 
@@ -98,13 +99,15 @@ class Game:
                 self.turns_count = 1
                 continue
 
-            logger.info(f"{current_player.name} [STATUS] alive")
-            logger.info(f"{current_player.name} [TURNS ] {self.turns_count}")
-            logger.info(f"{current_player.name} [CARDS ] {current_player.hand}")
+            logger.debug(f"{current_player.name} [STATUS] alive")
+            logger.debug(f"{current_player.name} [TURNS ] {self.turns_count}")
+            logger.debug(f"{current_player.name} [CARDS ] {current_player.hand}")
 
-            while current_player.has_playable_cards_in_hand and current_player.decide_play_card() and not self.end_turn:
-                played_card = current_player.choose_card()
-                current_player.play_card(played_card)
+            while current_player.has_playable_cards_in_hand and not self.end_turn:
+                played_card = current_player.decide_play_card()
+                if not played_card:
+                    break
+                current_player.play_card(played_card, self)
                 logger.info(f'{current_player.name} [PLAY  ] {played_card}')
                 is_card_noped = self.resolve_nopes()
                 if not is_card_noped:
@@ -112,6 +115,8 @@ class Game:
                     played_card.action(self)
                     if played_card.is_attack:
                         break
+                else:
+                    logger.info(f'{current_player.name} [PLAY  ] {played_card} failed')
 
             if self.end_turn:
                 self.end_turn = False
@@ -123,9 +128,12 @@ class Game:
                 if drawn_card.is_exploding_kitten:
                     drawn_card.action(self)
                 else:
-                    current_player.pick_card(drawn_card)
+                    current_player.receive_card(drawn_card)
+
+                logger.info(f'{current_player.name} [DECK  ] {self.deck.cards}')
 
                 self.turns_count -= 1
 
         winner = next(player for player in self.players if player.is_alive)
-        logger.info(f"{winner.name} is the winner!")
+        logger.info(f"{winner.name} [WINNER]")
+        logger.info("GAME END")

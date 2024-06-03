@@ -1,7 +1,6 @@
 """
 INPUT:
-12 CARD TYPES COUNT (Defuse, Attack, Skip, Nope, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
-# 39 ONE-HOT TOP THREE CARDS (ExplodingKitten, Defuse, Attack, Skip, Nope, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
+12 CARD TYPES COUNT (Defuse, Nope, Attack, Skip, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
 4 OPPONENTS CARDS COUNT
 1 PLAYER DEFUSE CARDS COUNT
 1 DECK SIZE
@@ -11,7 +10,7 @@ INPUT:
 
 OUTPUT:
 1 DON'T PLAY THE CARD
-11 PLAY CARD TYPE (Attack, Skip, Nope, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
+11 PLAY CARD TYPE (Nope, Attack, Skip, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
 4 CHOOSE OPPONENT
 1 PLACE EXPLODING KITTEN IN DECK
 """

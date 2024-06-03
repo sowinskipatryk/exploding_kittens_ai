@@ -11,12 +11,12 @@ class Deck:
         random.shuffle(self.cards)
 
     def draw_card(self):
-        logger.debug(f"{self.cards}")
+        logger.debug(f"draw_card {self.cards}")
         return self.cards.pop()
 
     def insert_card(self, idx, card):
         self.cards.insert(idx, card)
-        logger.debug(f"{self.cards}")
+        logger.debug(f"insert_card {self.cards}")
 
     def get_top_three_cards(self):
         return self.cards[-3:]
