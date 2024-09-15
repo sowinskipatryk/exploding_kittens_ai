@@ -1,9 +1,10 @@
-import random
-
-from mapping import CARDS_MAPPING
+from game_logic.cards import Card
 
 
-class Player:
+class BasePlayer:
+    CARD_TYPES = [Card.Defuse, Card.Attack, Card.Skip, Card.Nope, Card.SeeTheFuture, Card.Favor, Card.Shuffle,
+                  Card.BeardCat, Card.HairyPotatoCat, Card.Cattermelon, Card.TacoCat, Card.RainbowRalphingCat]
+
     def __init__(self, index):
         self.index = index
         self.name = f"Player {index + 1}"
@@ -18,11 +19,11 @@ class Player:
         return len([card for card in self.hand if card.is_defuse])
 
     def get_playable_cards(self):
-        return [card for card in self.hand if card.is_playable()]
+        return [card for card in self.hand if card.is_playable]
 
     def get_cards_in_hand_filter(self):
         hand_types = [type(card) for card in self.hand]
-        return [1 if card in hand_types else 0 for card in CARDS_MAPPING]
+        return [1 if card in hand_types else 0 for card in self.CARD_TYPES]
 
     def has_multiple_cards_of_type(self, card_type, amount):
         return len([card for card in self.hand if isinstance(card, card_type)]) > amount
@@ -33,14 +34,19 @@ class Player:
 
     def receive_card(self, card):
         self.hand.append(card)
-        self.update_playable_cards()
+        self.update_playable_cards(card)
 
     def receive_cards(self, cards):
         self.hand.extend(cards)
-        self.update_playable_cards()
+        for card in cards:
+            self.update_playable_cards(card)
 
-    def update_playable_cards(self):
-        pass
+    def update_playable_cards(self, card):
+
+        pair = next(c for c in self.hand if isinstance(c, card.__class__))
+        if pair:
+            card.set_is_playable(True)
+            pair.set_is_playable(True)
 
     def set_adapter(self, adapter):
         self.adapter = adapter
@@ -51,18 +57,23 @@ class Player:
     def set_dead(self):
         self.is_alive = False
 
-    def get_from_hand(self, card):
-        self.hand.remove(card)
+    def get_from_hand(self, card_class):
+        for card in self.hand:
+            print('card_class', card_class)
+            if isinstance(card, card_class):
+                self.hand.remove(card)
+                return card
 
     @staticmethod
     def draw_card(deck):
         card = deck.draw_card()
+        print('cc', card)
         return card
 
-    def play_card(self, card, game):
-        self.get_from_hand(card)
+    def play_card(self, card_type, game):
+        card = self.get_from_hand(card_type)
         card.action(game)
-        self.update_playable_cards()
+        self.update_playable_cards(card)
 
     def get_defuse_card(self):
         for card in self.hand:
@@ -85,7 +96,6 @@ class Player:
 
     def decide_play_card(self):
         y = self.get_results()
-        print(CARDS_MAPPING)
         cards_values = y[:12]
         print(cards_values)
         cards_filter = self.get_cards_in_hand_filter()
@@ -97,7 +107,7 @@ class Player:
         if max_value > 0.5:
             card_id = y.index(max_value)
             print(card_id)
-            card = CARDS_MAPPING[card_id]
+            card = self.CARD_TYPES[card_id]
             print(card)
             return card
 
@@ -109,7 +119,7 @@ class Player:
         max_value = max(filtered_values)
         if max_value > 0.5:
             card_id = y.index(max_value)
-            card = CARDS_MAPPING[card_id]
+            card = self.CARD_TYPES[card_id]
             return card
 
     def decide_opponent(self):
@@ -128,21 +138,3 @@ class Player:
 
     def get_results(self):
         raise NotImplementedError
-
-
-class RandomPlayer(Player):
-    def get_results(self):
-        return [random.random() for _ in range(30)]
-
-    def choose_card(self):
-        return random.choice(self.get_playable_cards())
-
-
-class NeuralPlayer(Player):
-    def get_results(self):
-        return self.network.activate(self.adapter.input_array)
-
-    # def choose_card(self):
-    #     y = self.get_results()
-    #     card_values = y[:10]
-    #     return card_values.index(max(card_values))

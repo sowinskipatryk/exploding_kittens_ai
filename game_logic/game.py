@@ -1,16 +1,17 @@
 import random
 
-from cards import Card
-from deck import Deck
-from players import Player, NeuralPlayer, RandomPlayer
+from game_logic.cards import Card
+from game_logic.deck import Deck
+from game_logic.enums.card_names import CardName
 
 from log.config import logger
 
 
 class Game:
-    def __init__(self, players_count=5):
-        self.players_count = players_count
-        self.players = [RandomPlayer(index=i) for i in range(players_count)]
+    def __init__(self, players):
+        self.players_num = len(players)
+        self.players = players
+
         self.deck = self.create_deck()
 
         self.deal_defuse_cards()
@@ -19,7 +20,7 @@ class Game:
         self.put_exploding_kittens_in_the_deck()
         self.shuffle_deck()
 
-        self.current_player_index = random.randrange(0, players_count)
+        self.current_player_index = random.randrange(0, self.players_num)
         self.turns_count = 1
         self.end_turn = False
 
@@ -39,39 +40,39 @@ class Game:
             player.receive_cards([self.deck.draw_card() for _ in range(amount)])
 
     def next_player(self):
-        self.current_player_index = (self.current_player_index + 1) % self.players_count
+        self.current_player_index = (self.current_player_index + 1) % self.players_num
 
     def create_deck(self):
         cards = []
-        cards.extend([Card.SeeTheFuture() for _ in range(5)])
-        cards.extend([Card.Nope() for _ in range(5)])
-        cards.extend([Card.Skip() for _ in range(4)])
-        cards.extend([Card.Shuffle() for _ in range(4)])
-        cards.extend([Card.Attack() for _ in range(4)])
-        cards.extend([Card.Favor() for _ in range(4)])
+        cards += [Card.SeeTheFuture() for _ in range(5)]
+        cards += [Card.Nope() for _ in range(5)]
+        cards += [Card.Skip() for _ in range(4)]
+        cards += [Card.Shuffle() for _ in range(4)]
+        cards += [Card.Attack() for _ in range(4)]
+        cards += [Card.Favor() for _ in range(4)]
 
-        cards.extend([Card.BeardCat() for _ in range(4)])
-        cards.extend([Card.TacoCat() for _ in range(4)])
-        cards.extend([Card.HairyPotatoCat() for _ in range(4)])
-        cards.extend([Card.Cattermelon() for _ in range(4)])
-        cards.extend([Card.RainbowRalphingCat() for _ in range(4)])
+        cards += [Card.BeardCat() for _ in range(4)]
+        cards += [Card.TacoCat() for _ in range(4)]
+        cards += [Card.HairyPotatoCat() for _ in range(4)]
+        cards += [Card.Cattermelon() for _ in range(4)]
+        cards += [Card.RainbowRalphingCat() for _ in range(4)]
 
-        cards.extend([Card.Defuse() for _ in range(min(2, 6 - self.players_count))])
+        cards += [Card.Defuse() for _ in range(min(2, 6 - self.players_num))]
 
         deck = Deck(cards)
         return deck
 
     def put_exploding_kittens_in_the_deck(self):
-        self.deck.cards.extend([Card.ExplodingKitten() for _ in range(self.players_count - 1)])
+        self.deck.cards.extend([Card.ExplodingKitten() for _ in range(self.players_num - 1)])
 
     def resolve_nopes(self):
         current_player_index = self.current_player_index
         nope_stack = []
         tries_since_nope = 0
 
-        while tries_since_nope < self.players_count:
+        while tries_since_nope < self.players_num:
             tries_since_nope += 1
-            current_player_index = (current_player_index + 1) % self.players_count
+            current_player_index = (current_player_index + 1) % self.players_num
             current_player = self.players[current_player_index]
 
             nope_card = current_player.get_nope_card()

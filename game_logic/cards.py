@@ -4,12 +4,13 @@ from log.config import logger
 class BaseCard:
     def __init__(self):
         self.name = self.__class__.__name__
+        self.is_playable = True
+
+    def set_is_playable(self, boolean):
+        self.is_playable = boolean
 
     def __repr__(self):
         return self.name
-
-    def is_playable(self):
-        return True
 
     def is_pair_card(self):
         return isinstance(self, PairCard)
@@ -39,17 +40,16 @@ class BaseCard:
 
 
 class PairCard(BaseCard):
-    def is_playable(self):
-        return False
+    def __init__(self):
+        super().__init__()
+        self.is_playable = False
 
 
 class Card:
     class ExplodingKitten(BaseCard):
         def __init__(self):
             super().__init__()
-
-        def is_playable(self):
-            return False
+            self.is_playable = False
 
         def action(self, game, **kwargs):
             player = game.players[game.current_player_index]
@@ -64,9 +64,7 @@ class Card:
     class Defuse(BaseCard):
         def __init__(self):
             super().__init__()
-
-        def is_playable(self):
-            return False
+            self.is_playable = False
 
         def action(self, game, **kwargs):
             player = game.players[game.current_player_index]

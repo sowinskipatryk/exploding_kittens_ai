@@ -44,11 +44,23 @@ class NetworkAdapter:
     def set_player_cards(self):
         pass
 
+    def set_opponents_cards_count(self):
+        pass
+
     def set_defuse_cards_count(self, player):
         self.input_array[self.DEFUSE_CARDS_COUNT] = self.normalize_defuse_cards_count(player.defuse_cards_count)
 
     def set_deck_size(self, game):
         self.input_array[self.DECK_SIZE] = self.normalize_deck_size(len(game.deck))
+
+    def set_statuses(self):
+        pass
+
+    def set_turns_left(self):
+        pass
+
+    def set_turn(self):
+        pass
 
     @staticmethod
     def normalize_defuse_cards_count(count):
