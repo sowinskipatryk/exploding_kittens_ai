@@ -1,140 +1,162 @@
-from game_logic.cards import Card
+import random
+from abc import ABC, abstractmethod
+from collections import defaultdict
+
+from game_logic.cards import PLAYABLE_CARD_NAMES, HAND_CARD_NAMES, PAIR_CARD_NAMES
+from log.config import logger
 
 
-class BasePlayer:
-    CARD_TYPES = [Card.Defuse, Card.Attack, Card.Skip, Card.Nope, Card.SeeTheFuture, Card.Favor, Card.Shuffle,
-                  Card.BeardCat, Card.HairyPotatoCat, Card.Cattermelon, Card.TacoCat, Card.RainbowRalphingCat]
+class BasePlayer(ABC):
+    is_neural = False
 
-    def __init__(self, index):
-        self.index = index
-        self.name = f"Player {index + 1}"
-        self.hand = []
-        # self.top_three_deck_cards = []
+    def __init__(self, name):
+        self.name = name
+        self.hand = {card: [] for card in HAND_CARD_NAMES}
+        self.deck_insight = []
         self.is_alive = True
-        self.network = None
-        self.adapter = None
+        self.used_defuse = False
 
-    @property
-    def defuse_cards_count(self):
-        return len([card for card in self.hand if card.is_defuse])
+        self.cards_played = defaultdict(int)
+        self.cards_drawn = 0
+        self.turns_survived = 0
+        self.attacks_sent = 0
+        self.attacks_received = 0
 
-    def get_playable_cards(self):
-        return [card for card in self.hand if card.is_playable]
+    def count_all_cards(self):
+        return sum(len(cards) for cards in self.hand.values())
 
-    def get_cards_in_hand_filter(self):
-        hand_types = [type(card) for card in self.hand]
-        return [1 if card in hand_types else 0 for card in self.CARD_TYPES]
+    def has_cards(self):
+        return self.count_all_cards() > 0
 
-    def has_multiple_cards_of_type(self, card_type, amount):
-        return len([card for card in self.hand if isinstance(card, card_type)]) > amount
+    def has_playable_pair_cards(self):
+        pair_cards = self.get_pair_cards()
+        pair_cards_count = [len(value) for key, value in self.hand.items() if key in pair_cards]
+        return any(count >= 2 for count in pair_cards_count)
 
-    @property
-    def has_playable_cards_in_hand(self):
-        return len(self.get_playable_cards()) > 0
+    def has_card(self, card_name):
+        return len(self.hand[card_name]) > 0
+
+    def get_cards_num(self, card_name):
+        return len(self.hand[card_name])
+
+    def remove_from_hand(self, card_name):
+        return self.hand[card_name].pop()
+
+    def get_cards_count_dict(self):
+        return {card.value: len(instances) for card, instances in self.hand.items()}
+
+    def get_cards_count_list(self):
+        return [len(value) for value in self.hand.values()]
+
+    def mask_cards_in_hand(self):
+        return [1 if self.hand[card] else 0 for card in self.hand]
+
+    def mask_playable_cards_in_hand(self):
+        return [1 if self.hand[card] else 0 for card in PLAYABLE_CARD_NAMES]
+
+    def has_playable_cards(self):
+        return any(self.hand[card] for card in PLAYABLE_CARD_NAMES)
 
     def receive_card(self, card):
-        self.hand.append(card)
-        self.update_playable_cards(card)
+        self.hand[card.name].append(card)
+        logger.debug(f'[Player] {self.name} [RECEIVE] {card}')
+        logger.debug(f"[Player] {self.name} [hand] {self.get_cards_count_dict()}")
 
     def receive_cards(self, cards):
-        self.hand.extend(cards)
         for card in cards:
-            self.update_playable_cards(card)
+            self.receive_card(card)
 
-    def update_playable_cards(self, card):
-
-        pair = next(c for c in self.hand if isinstance(c, card.__class__))
-        if pair:
-            card.set_is_playable(True)
-            pair.set_is_playable(True)
-
-    def set_adapter(self, adapter):
-        self.adapter = adapter
-
-    def set_network(self, network):
-        self.network = network
-
-    def set_dead(self):
+    def explode(self):
         self.is_alive = False
 
-    def get_from_hand(self, card_class):
-        for card in self.hand:
-            print('card_class', card_class)
-            if isinstance(card, card_class):
-                self.hand.remove(card)
-                return card
-
-    @staticmethod
-    def draw_card(deck):
+    def draw_card(self, deck):
         card = deck.draw_card()
-        print('cc', card)
+        self.cards_drawn += 1
+        logger.info(f"[Player] {self.name} [DRAW] {card}")
         return card
 
-    def play_card(self, card_type, game):
-        card = self.get_from_hand(card_type)
-        card.action(game)
-        self.update_playable_cards(card)
+    def get_pair_cards(self):
+        return [card for card in self.hand if card.name in PAIR_CARD_NAMES]
 
-    def get_defuse_card(self):
-        for card in self.hand:
-            if card.is_defuse:
-                return card
+    def check_pair_card(self, card_name):
+        card = self.get_card_by_name(card_name)
+        return card.is_pair
 
-    def get_nope_card(self):
-        for card in self.hand:
-            if card.is_nope:
-                return card
+    def play_card(self, card_name):
+        is_pair_card = self.check_pair_card(card_name)
+        num_cards = 2 if is_pair_card else 1
+        for i in range(num_cards):
+            card = self.remove_from_hand(card_name)
+        self.cards_played[card_name.value] += 1
+        logger.info(f"[Player] {self.name} [PLAY] {card}")
+        logger.debug(f"[Player] {self.name} [hand] {self.get_cards_count_dict()}")
+        return card
 
-    def correct_opponent_index(self, opp_id):
-        if self.index > opp_id:
-            return opp_id + 1
-        return opp_id
+    def has_enough_cards_to_play(self, card_name):
+        if self.hand[card_name]:
+            if self.hand[card_name][0].is_pair:
+                return len(self.hand[card_name]) >= 2
+            return len(self.hand[card_name]) >= 1
 
-    def place_exploding_kitten(self, card, deck):
-        idx = self.decide_exploding_kitten_placement()
-        deck.insert_card(idx, card)
+    def get_card_by_name(self, card_name):
+        if self.hand[card_name]:
+            return self.hand[card_name][0]
 
+    def steal_card(self, opponent):
+        if not opponent.has_cards():
+            return
+        card_names_got = [card_name for card_name in opponent.hand if opponent.has_card(card_name)]
+        card_name = random.choice(card_names_got)
+        card = opponent.remove_from_hand(card_name)
+        logger.info(f'[Player] {self.name} [STEAL] {card}')
+        self.receive_card(card)
+        self.attacks_sent += 1
+
+    #
+    # def reset_deck_insight(self):
+    #     self.deck_insight = []
+
+    def give_card(self):
+        card_id = self.decide_give_card()
+        card_names_list = list(self.hand.keys())
+        card_name = card_names_list[card_id]
+        assert self.hand[card_name]
+        self.attacks_received += 1
+        logger.info(f'[Player] {self.name} [GIVE] {card_name.value}')
+        return self.hand[card_name].pop()
+
+    def choose_card(self):
+        card_id = self.decide_play_card()
+        card = PLAYABLE_CARD_NAMES[card_id]
+        logger.info(f'[Player] {self.name} [CHOOSE] {card.value}')
+        return card
+
+    def choose_opponent(self, game):
+        opponent_id = self.decide_opponent(game)
+        opponent = game.players[opponent_id]
+        if opponent.is_alive and opponent.has_cards():
+            return opponent
+
+    @abstractmethod
+    def decide_play(self):
+        pass
+
+    @abstractmethod
     def decide_play_card(self):
-        y = self.get_results()
-        cards_values = y[:12]
-        print(cards_values)
-        cards_filter = self.get_cards_in_hand_filter()
-        print(cards_filter)
-        filtered_values = [value if cards_filter[i] else 0 for i, value in enumerate(cards_values)]
-        print(filtered_values)
-        max_value = max(filtered_values)
-        print(max_value)
-        if max_value > 0.5:
-            card_id = y.index(max_value)
-            print(card_id)
-            card = self.CARD_TYPES[card_id]
-            print(card)
-            return card
+        pass
 
+    @abstractmethod
     def decide_give_card(self):
-        y = self.get_results()
-        cards_values = y[12:24]
-        cards_filter = self.get_cards_in_hand_filter()
-        filtered_values = [value for i, value in enumerate(cards_values) if cards_filter[i]]
-        max_value = max(filtered_values)
-        if max_value > 0.5:
-            card_id = y.index(max_value)
-            card = self.CARD_TYPES[card_id]
-            return card
+        pass
 
-    def decide_opponent(self):
-        y = self.get_results()
-        max_value = max(y[:4])
-        opp_id = y.index(max_value)
-        return self.correct_opponent_index(opp_id)
+    @abstractmethod
+    def decide_kitten_placement(self, game):
+        pass
 
-    def decide_exploding_kitten_placement(self):
-        y = self.get_results()
-        return y[-1]
-
+    @abstractmethod
     def decide_nope(self):
-        y = self.get_results()
-        return y[0] > 0.5
+        pass
 
-    def get_results(self):
-        raise NotImplementedError
+    @abstractmethod
+    def decide_opponent(self, game):
+        pass
