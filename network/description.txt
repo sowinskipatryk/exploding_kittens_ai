@@ -1,0 +1,19 @@
+M=12 - number of card types
+N=5 - number of players
+
+INPUTS [30]:
+M CARD TYPES COUNT (Defuse, Nope, Attack, Skip, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
+1 ANY PAIR CARD PLAYABLE
+1 EXTRA TURNS
+N PLAYERS CARDS COUNT
+N PLAYERS USED DEFUSE
+N PLAYERS STATUS
+1 DECK SIZE
+
+OUTPUTS [31]:
+1 DECIDE PLAY CARD
+1 DECIDE NOPE
+M-1 PLAY CARD TYPE (Nope, Attack, Skip, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
+M GIVE CARD TYPE (Nope, Attack, Skip, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat, Defuse)
+N CHOOSE PLAYER
+1 PLACE EXPLODING KITTEN IN DECK

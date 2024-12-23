@@ -1,71 +1,29 @@
-"""
-INPUT:
-12 CARD TYPES COUNT (Defuse, Nope, Attack, Skip, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
-4 OPPONENTS CARDS COUNT
-1 PLAYER DEFUSE CARDS COUNT
-1 DECK SIZE
-5 PLAYERS STATUSES
-1 TURNS LEFT
-5 ONE-HOT TURN
-
-OUTPUT:
-1 DON'T PLAY THE CARD
-11 PLAY CARD TYPE (Nope, Attack, Skip, SeeTheFuture, Favor, Shuffle, BeardCat, HairyPotatoCat, Cattermelon, TacoCat, RainbowRalphingCat)
-4 CHOOSE OPPONENT
-1 PLACE EXPLODING KITTEN IN DECK
-"""
-
-
 class NetworkAdapter:
-    CARD_TYPES_COUNT = 0
-    OPPONENTS_CARDS_COUNT = 12
-    DEFUSE_CARDS_COUNT = 16
-    DECK_SIZE = 17
-    PLAYERS_STATUSES = 18
-    TURNS_LEFT = 23
-    TURN = 24
+    def __init__(self, game):
+        self.game = game
 
-    def __init__(self, players_num):
-        self.players_num = players_num
-        self.input_array = [0 for _ in range(29)]
+    def get_game_state(self):
+        extra_turns = self.get_extra_turns()
+        players_cards_count = self.get_players_cards_count()
+        players_used_defuse = self.get_players_used_defuse()
+        players_status = self.get_players_status()
+        deck_size = self.get_deck_size()
+        return extra_turns + players_cards_count + players_used_defuse + players_status + deck_size
 
-        self.set_all_players_alive()
+    def get_extra_turns(self):
+        return [self.game.extra_turns]
 
-    def set_all_players_alive(self):
-        for i in range(self.players_num):
-            self.set_player_alive(i)
+    def get_players_cards_count(self):
+        return [player.count_all_cards() for player in self.game.players]
 
-    def set_player_alive(self, index):
-        self.input_array[self.PLAYERS_STATUSES + index] = 1.
+    def get_players_used_defuse(self):
+        return [1 if player.used_defuse else 0 for player in self.game.players]
 
-    def set_player_dead(self, index):
-        self.input_array[self.PLAYERS_STATUSES + index] = 0.
+    def get_players_status(self):
+        return [1 if player.is_alive else 0 for player in self.game.players]
 
-    def set_player_cards(self):
-        pass
+    def get_deck_size(self):
+        return [len(self.game.deck)]
 
-    def set_opponents_cards_count(self):
-        pass
-
-    def set_defuse_cards_count(self, player):
-        self.input_array[self.DEFUSE_CARDS_COUNT] = self.normalize_defuse_cards_count(player.defuse_cards_count)
-
-    def set_deck_size(self, game):
-        self.input_array[self.DECK_SIZE] = self.normalize_deck_size(len(game.deck))
-
-    def set_statuses(self):
-        pass
-
-    def set_turns_left(self):
-        pass
-
-    def set_turn(self):
-        pass
-
-    @staticmethod
-    def normalize_defuse_cards_count(count):
-        return count / 6
-
-    @staticmethod
-    def normalize_deck_size(count):
-        return count / 56
+    def normalize_deck_size(self, count):
+        return count / self.game.settings.NUM_CARDS_IN_DECK
