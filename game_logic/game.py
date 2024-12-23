@@ -16,6 +16,7 @@ class Game:
             raise ValueError('This game requires 2-5 players to play!')
 
         self.players = players
+        self.set_adapters()
 
         self.deck = Deck(self.num_players)
         self.settings = Settings(self.num_players)
@@ -32,6 +33,16 @@ class Game:
         self.skip_card_draw = False
         self.end_turn = False
         self.winner = None
+
+    def set_adapters(self):
+        neural_players = [player for player in self.players if player.is_neural]
+        if not neural_players:
+            return
+
+        from network.adapter import NetworkAdapter
+        adapter = NetworkAdapter(self)
+        for player in neural_players:
+            player.set_adapter(adapter)
 
     def get_current_player(self):
         return self.players[self.current_player_id]
@@ -74,14 +85,13 @@ class Game:
             current_player_index = (current_player_index + 1) % self.num_players
             current_player = self.players[current_player_index]
 
-            has_nope_card = current_player.has_card(CardName.NOPE)
-            if has_nope_card and current_player.decide_nope():
+            if current_player.has_card(CardName.NOPE) and current_player.decide_nope():
                 nope_card = current_player.play_card(CardName.NOPE)
-                nope_card.action(self)
+                nope_card.action(self, current_player)
                 nope_stack.append(current_player_index)
                 tries_since_nope = 0
 
-        if len(nope_stack) % 2:
+        if len(nope_stack) % 2 == 1:
             return True
 
     def play(self):
@@ -104,31 +114,29 @@ class Game:
             logger.debug(f"[Player] {curr_player.name} [hand] {curr_player.get_cards_count_dict()}")
             logger.debug(f"[Player] {curr_player.name} [deck insight] {curr_player.deck_insight}")
 
-            if curr_player.has_playable_cards() and curr_player.decide_play():
-                num_tries = 0
-                while num_tries < 5:
-                    card_name = curr_player.choose_card()
-                    is_move_allowed = curr_player.has_enough_cards_to_play(card_name)
-                    if is_move_allowed:
-                        card = curr_player.play_card(card_name)
-                        # logger.info(f'[Player] {curr_player.name} [PLAY] {card}')
-                        is_card_noped = self.resolve_nopes()
-                        if is_card_noped:
-                            logger.info(f'{curr_player.name} [USE] {card} noped')
-                        else:
-                            card.action(self)
-                        break
-                    num_tries += 1
+            num_tries = 0
+            while curr_player.has_playable_cards() and curr_player.decide_play() and num_tries < 5:
+                card_name = curr_player.choose_card()
+                is_move_allowed = curr_player.has_enough_cards_to_play(card_name)
+                if is_move_allowed:
+                    card = curr_player.play_card(card_name)
+                    # logger.info(f'[Player] {curr_player.name} [PLAY] {card}')
+                    is_card_noped = self.resolve_nopes()
+                    if is_card_noped:
+                        logger.info(f'{curr_player.name} [USE] {card} noped')
+                    else:
+                        card.action(self, curr_player)
+                        num_tries = 0
+                num_tries += 1
 
+            drawn_card = curr_player.draw_card(self.deck)
+
+            if drawn_card == CardName.EXPLODING_KITTEN:
+                drawn_card.action(self, curr_player)
             else:
-                drawn_card = curr_player.draw_card(self.deck)
+                curr_player.receive_card(drawn_card)
 
-                if drawn_card == CardName.EXPLODING_KITTEN:
-                    drawn_card.action(self)
-                else:
-                    curr_player.receive_card(drawn_card)
-
-                self.proceed_to_next_turn()
+            self.proceed_to_next_turn()
 
         self.winner = next(player for player in self.players if player.is_alive)
         logger.info(f"[Player] {self.winner.name} [WINNER]")
@@ -149,4 +157,4 @@ class Game:
 
         stats['total_turns'] = self.turns_counter
         stats['winner'] = self.winner.name
-        print(stats)
+        return stats

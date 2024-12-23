@@ -1,141 +1,148 @@
+from abc import ABC, abstractmethod
+
 from log.config import logger
+from game_logic.enums.card_names import CardName
 
 
-class BaseCard:
-    def __init__(self):
-        self.name = self.__class__.__name__
-        self.is_playable = True
+class BaseCard(ABC):
+    is_pair = False
+    is_playable = True
+    is_hand_card = True
 
-    def set_is_playable(self, boolean):
-        self.is_playable = boolean
+    @property
+    @abstractmethod
+    def name(self):
+        pass
 
     def __repr__(self):
-        return self.name
+        return self.name.value
 
-    def is_pair_card(self):
-        return isinstance(self, PairCard)
+    def __eq__(self, other):
+        return self.name == other
 
-    @property
-    def is_exploding_kitten(self):
-        return isinstance(self, Card.ExplodingKitten)
+    def action(self, game, player, **kwargs):
+        logger.info(f"[Card] {player.name} [ACTION] {self}")
+        self._action_logic(game, player, **kwargs)
 
-    @property
-    def is_defuse(self):
-        return isinstance(self, Card.Defuse)
-
-    @property
-    def is_attack(self):
-        return isinstance(self, Card.Attack)
-
-    @property
-    def is_skip(self):
-        return isinstance(self, Card.Skip)
-
-    @property
-    def is_nope(self):
-        return isinstance(self, Card.Nope)
-
-    def action(self, game, **kwargs):
+    @abstractmethod
+    def _action_logic(self, game, player, **kwargs):
         pass
 
 
-class PairCard(BaseCard):
-    def __init__(self):
-        super().__init__()
-        self.is_playable = False
+class ExplodingKitten(BaseCard):
+    name = CardName.EXPLODING_KITTEN
+    is_playable = False
+    is_hand_card = False
+
+    def _action_logic(self, game, player, **kwargs):
+        has_defuse_card = player.has_card(CardName.DEFUSE)
+        if has_defuse_card:
+            card = player.play_card(CardName.DEFUSE)
+            card.action(game, player, exploding_kitten_card=self)
+        else:
+            player.explode()
+            logger.debug(f"[Player] {player.name} [EXPLODE]")
 
 
-class Card:
-    class ExplodingKitten(BaseCard):
-        def __init__(self):
-            super().__init__()
-            self.is_playable = False
+class Defuse(BaseCard):
+    name = CardName.DEFUSE
+    is_playable = False
 
-        def action(self, game, **kwargs):
-            player = game.players[game.current_player_index]
-            defuse_card = player.get_defuse_card()
-            if defuse_card:
-                logger.info(f'{player.name} [PLAY  ] {defuse_card}')
-                defuse_card.action(game, kitten_card=self)
-            else:
-                player.set_dead()
-                logger.info(f'{player.name} [STATUS] dead')
+    def _action_logic(self, game, player, **kwargs):
+        exploding_kitten_card = kwargs.get('exploding_kitten_card')
+        kitten_placement_index = player.decide_kitten_placement(game)
+        game.deck.insert_card(kitten_placement_index, exploding_kitten_card)
+        if not player.used_defuse:
+            player.used_defuse = True
 
-    class Defuse(BaseCard):
-        def __init__(self):
-            super().__init__()
-            self.is_playable = False
 
-        def action(self, game, **kwargs):
-            player = game.players[game.current_player_index]
-            player.hand.remove(self)
-            idx = int(player.decide_exploding_kitten_placement() * len(game.deck))
-            game.deck.insert_card(idx, kwargs.get('kitten_card'))
+class Attack(BaseCard):
+    name = CardName.ATTACK
 
-    class Attack(BaseCard):
-        def __init__(self):
-            super().__init__()
+    def _action_logic(self, game, player, **kwargs):
+        if not game.extra_turns:
+            game.extra_turns += 1
+        else:
+            game.extra_turns += 2
 
-        def action(self, game, **kwargs):
-            game.end_turn = True
-            game.next_player()
-            if game.turns_count < 2:
-                game.turns_count = 2
-            else:
-                game.turns_count += 2
+        game.proceed_to_next_player()
+        game.turns_counter += 1
 
-    class Skip(BaseCard):
-        def __init__(self):
-            super().__init__()
 
-        def action(self, game, **kwargs):
-            game.end_turn = True
-            game.turns_count -= 1
+class Skip(BaseCard):
+    name = CardName.SKIP
 
-    class Favor(BaseCard):
-        def __init__(self):
-            super().__init__()
+    def _action_logic(self, game, player, **kwargs):
+        if game.extra_turns > 0:
+            game.extra_turns -= 1
+        else:
+            game.proceed_to_next_player()
 
-        def action(self, game, **kwargs):
-            player = game.players[game.current_player_index]
-            opponent_id = player.decide_opponent()
-            opponent = game.players[opponent_id]
-            card_id = opponent.decide_give_card()
 
-    class Shuffle(BaseCard):
-        def __init__(self):
-            super().__init__()
+class Favor(BaseCard):
+    name = CardName.FAVOR
 
-        def action(self, game, **kwargs):
-            game.deck.shuffle()
+    def _action_logic(self, game, player, **kwargs):
+        opponent = player.choose_opponent(game)
+        if not opponent:
+            return
+        card = opponent.give_card()
+        player.receive_card(card)
 
-    class SeeTheFuture(BaseCard):
-        def __init__(self):
-            super().__init__()
 
-        def action(self, game, **kwargs):
-            game.deck.get_top_three_cards()
+class Shuffle(BaseCard):
+    name = CardName.SHUFFLE
 
-    class Nope(BaseCard):
-        def __init__(self):
-            super().__init__()
+    def _action_logic(self, game, player, **kwargs):
+        game.deck.shuffle()
 
-    class TacoCat(PairCard):
-        def __init__(self):
-            super().__init__()
 
-    class BeardCat(PairCard):
-        def __init__(self):
-            super().__init__()
+class SeeTheFuture(BaseCard):
+    name = CardName.SEE_THE_FUTURE
 
-    class HairyPotatoCat(PairCard):
-        def __init__(self):
-            super().__init__()
+    def _action_logic(self, game, player, **kwargs):
+        game.deck.check_three_top_cards()
 
-    class Cattermelon(PairCard):
-        def __init__(self):
-            super().__init__()
 
-    class RainbowRalphingCat(PairCard):
-        def __init__(self):
-            super().__init__()
+class Nope(BaseCard):
+    name = CardName.NOPE
+
+    def _action_logic(self, game, player, **kwargs):
+        pass  # logic implemented in resolve_nopes()
+
+
+class PairCard(BaseCard, ABC):
+    is_pair = True
+        
+    def _action_logic(self, game, player, **kwargs):
+        opponent_id = player.decide_opponent(game)
+        opponent = game.players[opponent_id]
+        player.steal_card(opponent)
+
+
+class TacoCat(PairCard):
+    name = CardName.TACO_CAT
+
+
+class BeardCat(PairCard):
+    name = CardName.BEARD_CAT
+
+
+class HairyPotatoCat(PairCard):
+    name = CardName.HAIRY_POTATO_CAT
+
+
+class Cattermelon(PairCard):
+    name = CardName.CATTERMELON
+
+
+class RainbowRalphingCat(PairCard):
+    name = CardName.RAINBOW_RALPHING_CAT
+
+
+CARDS_CLASSES_LIST = [ExplodingKitten, Defuse, Attack, Skip, Favor, Shuffle, SeeTheFuture, Nope, TacoCat, BeardCat,
+                      HairyPotatoCat, Cattermelon, RainbowRalphingCat]
+
+PAIR_CARD_NAMES = [card.name for card in CARDS_CLASSES_LIST if card.is_pair]
+PLAYABLE_CARD_NAMES = [card.name for card in CARDS_CLASSES_LIST if card.is_playable]
+HAND_CARD_NAMES = [card.name for card in CARDS_CLASSES_LIST if card.is_hand_card]
