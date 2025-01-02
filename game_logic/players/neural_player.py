@@ -14,8 +14,6 @@ OPPONENT_DECISION_INDEX = GIVE_CARD_DECISION_INDEX + len(HAND_CARD_NAMES)
 
 
 class NeuralPlayer(BasePlayer):
-    is_neural = True
-
     def __init__(self, name, network=None):
         super().__init__(name)
         self.network = network
