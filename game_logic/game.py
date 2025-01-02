@@ -76,6 +76,9 @@ class Game:
     def proceed_to_next_player(self):
         self.current_player_id = (self.current_player_id + 1) % self.num_players
 
+    def player_changed(self, player):
+        return self.current_player_id != self.players.index(player)
+
     def resolve_nopes(self):
         current_player_index = self.current_player_id
         nope_stack = []
@@ -99,9 +102,6 @@ class Game:
         logger.info("[Game] START")
 
         while self.num_alive_players > 1:
-																																	
-
-					   
             curr_player = self.get_current_player()
             if curr_player.is_alive:
                 curr_player.turns_survived = self.turns_counter
@@ -128,8 +128,13 @@ class Game:
                         logger.info(f'{curr_player.name} [USE] {card} noped')
                     else:
                         card.action(self, curr_player)
+                        if self.player_changed(curr_player):
+                            break
                         num_tries = 0
                 num_tries += 1
+
+            if self.player_changed(curr_player):
+                continue
 
             drawn_card = curr_player.draw_card(self.deck)
 
@@ -142,6 +147,7 @@ class Game:
 
         self.winner = next(player for player in self.players if player.is_alive)
         logger.info(f"[Player] {self.winner.name} [WINNER]")
+        logger.debug(f"[statuses] {[player.is_alive for player in self.players]}")
         logger.info("[Game] END")
 
         return self.game_stats()
