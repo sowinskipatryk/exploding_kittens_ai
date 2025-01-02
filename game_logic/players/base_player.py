@@ -7,8 +7,6 @@ from log.config import logger
 
 
 class BasePlayer(ABC):
-    is_neural = False
-
     def __init__(self, name):
         self.name = name
         self.hand = {card: [] for card in HAND_CARD_NAMES}
