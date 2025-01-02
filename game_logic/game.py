@@ -99,17 +99,18 @@ class Game:
         logger.info("[Game] START")
 
         while self.num_alive_players > 1:
-            logger.info(f"[Game] TURN {self.turns_counter}")  # !!!!! it should be called once for every turn but it does more often
+																																	
 
-            while True:
-                curr_player = self.get_current_player()
-                if curr_player.is_alive:
-                    curr_player.turns_survived = self.turns_counter
-                    break
-
+					   
+            curr_player = self.get_current_player()
+            if curr_player.is_alive:
+                curr_player.turns_survived = self.turns_counter
+            else:
+                logger.debug(f"[Player] {curr_player.name} [status] dead")
                 self.proceed_to_next_player()
                 continue
 
+            logger.info(f"[Game] TURN {self.turns_counter}")
             logger.debug(f"[Player] {curr_player.name} [status] alive")
             logger.debug(f"[Player] {curr_player.name} [extra turns] {self.extra_turns}")
             logger.debug(f"[Player] {curr_player.name} [hand] {curr_player.get_cards_count_dict()}")
