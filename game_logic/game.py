@@ -1,6 +1,7 @@
 import random
 from collections import defaultdict
 
+from game_logic.players import NeuralPlayer
 from game_logic.deck import Deck
 from game_logic.enums.card_names import CardName
 from game_logic.settings import Settings
@@ -35,7 +36,7 @@ class Game:
         self.winner = None
 
     def set_adapters(self):
-        neural_players = [player for player in self.players if player.is_neural]
+        neural_players = [player for player in self.players if isinstance(player, NeuralPlayer)]
         if not neural_players:
             return
 
